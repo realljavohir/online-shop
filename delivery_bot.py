@@ -15,7 +15,7 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 
 # ==================== KONFIGURATSIYA ====================
-TOKEN = os.environ.get("BOT_TOKEN", "8753597096:aafneqoidkyzatgrcuiqn22c0tnahc5jts0")
+TOKEN = os.environ.get("BOT_TOKEN", "8753597096:AAFNeqOiDKYzatgrcuiQn22c0tNAhc5jTs0")
 ADMIN_IDS = [int(id) for id in os.environ.get("ADMIN_IDS", "6713905538").split(",") if id]
 
 if not TOKEN:
