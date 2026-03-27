@@ -15,8 +15,8 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 
 # ==================== KONFIGURATSIYA ====================
-TOKEN = "YOUR_BOT_TOKEN_HERE"  # Bot tokenini kiriting
-ADMIN_IDS = [123456789]  # Adminlar Telegram ID ro'yxati
+TOKEN = "8753597096:aafneqoidkyzatgrcuiqn22c0tnahc5jts0"  # Bot tokenini kiriting
+ADMIN_IDS = [6713905538]  # Adminlar Telegram ID ro'yxati
 
 # Komissiya sozlamalari
 COMMISSION_AMOUNT = 500  # So'mda (500-1000 oralig'ida)
