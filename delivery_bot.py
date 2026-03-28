@@ -356,7 +356,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🚗 Haydovchilar", callback_data="admin_drivers")],
         [InlineKeyboardButton("📦 Buyurtmalar", callback_data="admin_orders")],
         [InlineKeyboardButton("💰 Admin balans", callback_data="admin_balance")],
-        [InlineKeyboardButton("⚙️ Komissiya sozlamalari", callback_data="admin_commission")]
+        [InlineKeyboardButton("⚙️ Komissiya sozlamalari", callback_data="admin_commission")],
+        [InlineKeyboardButton("🔙 Asosiy menyu", callback_data="admin_back_to_main")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("👨‍💼 Admin panel", reply_markup=reply_markup)
@@ -387,7 +388,12 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 💰 Umumiy daromad: {stats['total_income']:,} so'm
 💰 Umumiy komissiya: {stats['total_commission']:,} so'm
         """
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
+        
+        # Orqaga qaytish tugmasi qo'shildi
+        keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
     
     elif data == "admin_users":
         cursor = db.conn.cursor()
@@ -402,7 +408,11 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for user in users:
             text += f"🆔 ID: `{user[0]}`\n👤 {user[1]}\n📞 {user[2] or '❌'}\n📌 {user[3]}\n💰 {user[4]:,} so'm\n📅 {user[5][:16]}\n\n"
         
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
+        # Orqaga qaytish tugmasi qo'shildi
+        keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
     
     elif data == "admin_orders":
         cursor = db.conn.cursor()
@@ -423,7 +433,11 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             emoji = status_emoji.get(order[3], "❓")
             text += f"{emoji} #{order[0]} | {order[3]}\n📍 {order[1][:30]} → {order[2][:30]}\n💰 {order[4]:,} so'm\n📅 {order[5][:16]}\n\n"
         
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
+        # Orqaga qaytish tugmasi qo'shildi
+        keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
     
     elif data == "admin_drivers":
         cursor = db.conn.cursor()
@@ -446,13 +460,23 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             status = "🟢 Faol" if driver[5] else "🔴 Faol emas"
             text += f"🆔 ID: `{driver[0]}`\n👤 {driver[1]}\n📞 {driver[2] or '❌'}\n🚘 {driver[3]} | {driver[4]}\n⭐ {driver[6]:.1f} | 📦 {driver[7]}\n💰 {driver[8]:,} so'm\n📌 {status}\n\n"
         
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
+        # Orqaga qaytish tugmasi qo'shildi
+        keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
     
     elif data == "admin_balance":
         balance = db.get_admin_balance()
+        
+        # Orqaga qaytish tugmasi qo'shildi
+        keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await query.edit_message_text(
             f"💰 **Admin balansi:**\n\n{balance:,} so'm",
-            parse_mode=ParseMode.MARKDOWN
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=reply_markup
         )
     
     elif data == "admin_commission":
@@ -478,21 +502,35 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("set_comm_"):
         amount = int(data.split("_")[2])
         if db.set_commission(amount):
-            await query.edit_message_text(f"✅ Komissiya {amount} so'mga o'zgartirildi!")
+            # Orqaga qaytish tugmasi qo'shildi
+            keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(f"✅ Komissiya {amount} so'mga o'zgartirildi!", reply_markup=reply_markup)
         else:
             await query.edit_message_text("❌ Komissiya 500-1000 so'm oralig'ida bo'lishi kerak!")
     
     elif data == "admin_back":
+        # Admin panelning asosiy menyusiga qaytish
         keyboard = [
             [InlineKeyboardButton("📊 Statistika", callback_data="admin_stats")],
             [InlineKeyboardButton("👥 Foydalanuvchilar", callback_data="admin_users")],
             [InlineKeyboardButton("🚗 Haydovchilar", callback_data="admin_drivers")],
             [InlineKeyboardButton("📦 Buyurtmalar", callback_data="admin_orders")],
             [InlineKeyboardButton("💰 Admin balans", callback_data="admin_balance")],
-            [InlineKeyboardButton("⚙️ Komissiya sozlamalari", callback_data="admin_commission")]
+            [InlineKeyboardButton("⚙️ Komissiya sozlamalari", callback_data="admin_commission")],
+            [InlineKeyboardButton("🔙 Asosiy menyu", callback_data="admin_back_to_main")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text("👨‍💼 Admin panel", reply_markup=reply_markup)
+    
+    elif data == "admin_back_to_main":
+        # Botning asosiy menyusiga qaytish
+        user = db.get_user(user_id)
+        user_type = user[3] if user else 'customer'
+        await query.edit_message_text(
+            "Bosh menyuga qaytdingiz.",
+            reply_markup=get_main_keyboard(user_type)
+        )
 
 # ==================== BOT ASOSIY FUNKSIYALAR ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -642,7 +680,8 @@ async def get_pickup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['pickup'] = update.message.text
     
     await update.message.reply_text(
-        "📍 Qayerga yetkazib berish joyini kiriting:",
+        "📍 Qayerga yetkazib berish joyini kiriting:\n"
+        "Masalan: Toshkent, Yunusobod, 14-mavze",
         reply_markup=get_back_button()
     )
     return States.WAITING_DELIVERY.value
@@ -1017,7 +1056,8 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /rate_{id} - Reyting berish
 /admin - Admin panel (faqat adminlar uchun)
 
-📞 **Aloqa:** @support
+📞 **Aloqa:** @reall_javohir | +998701154403
+
         """
         await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
 
