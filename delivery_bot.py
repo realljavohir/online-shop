@@ -313,15 +313,7 @@ class Database:
 db = Database()
 
 # ==================== HOLATLAR ====================
-class States(Enum):
-    MAIN = 0
-    WAITING_PHONE = 1
-    WAITING_CAR_MODEL = 2
-    WAITING_PLATE_NUMBER = 3
-    WAITING_PICKUP = 4
-    WAITING_DELIVERY = 5
-    WAITING_ORDER_PHONE = 6
-    WAITING_RATING = 7
+WAITING_PHONE, WAITING_CAR_MODEL, WAITING_PLATE_NUMBER, WAITING_PICKUP, WAITING_DELIVERY, WAITING_ORDER_PHONE, WAITING_RATING = range(7)
 
 # ==================== KLAVIATURALAR ====================
 def get_main_keyboard(user_type: str = 'customer'):
@@ -389,7 +381,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 💰 Umumiy komissiya: {stats['total_commission']:,} so'm
         """
         
-        # Orqaga qaytish tugmasi qo'shildi
         keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -408,7 +399,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for user in users:
             text += f"🆔 ID: `{user[0]}`\n👤 {user[1]}\n📞 {user[2] or '❌'}\n📌 {user[3]}\n💰 {user[4]:,} so'm\n📅 {user[5][:16]}\n\n"
         
-        # Orqaga qaytish tugmasi qo'shildi
         keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -433,7 +423,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             emoji = status_emoji.get(order[3], "❓")
             text += f"{emoji} #{order[0]} | {order[3]}\n📍 {order[1][:30]} → {order[2][:30]}\n💰 {order[4]:,} so'm\n📅 {order[5][:16]}\n\n"
         
-        # Orqaga qaytish tugmasi qo'shildi
         keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -460,7 +449,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             status = "🟢 Faol" if driver[5] else "🔴 Faol emas"
             text += f"🆔 ID: `{driver[0]}`\n👤 {driver[1]}\n📞 {driver[2] or '❌'}\n🚘 {driver[3]} | {driver[4]}\n⭐ {driver[6]:.1f} | 📦 {driver[7]}\n💰 {driver[8]:,} so'm\n📌 {status}\n\n"
         
-        # Orqaga qaytish tugmasi qo'shildi
         keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -469,7 +457,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "admin_balance":
         balance = db.get_admin_balance()
         
-        # Orqaga qaytish tugmasi qo'shildi
         keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -502,7 +489,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("set_comm_"):
         amount = int(data.split("_")[2])
         if db.set_commission(amount):
-            # Orqaga qaytish tugmasi qo'shildi
             keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="admin_back")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(f"✅ Komissiya {amount} so'mga o'zgartirildi!", reply_markup=reply_markup)
@@ -510,7 +496,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("❌ Komissiya 500-1000 so'm oralig'ida bo'lishi kerak!")
     
     elif data == "admin_back":
-        # Admin panelning asosiy menyusiga qaytish
         keyboard = [
             [InlineKeyboardButton("📊 Statistika", callback_data="admin_stats")],
             [InlineKeyboardButton("👥 Foydalanuvchilar", callback_data="admin_users")],
@@ -524,7 +509,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("👨‍💼 Admin panel", reply_markup=reply_markup)
     
     elif data == "admin_back_to_main":
-        # Botning asosiy menyusiga qaytish
         user = db.get_user(user_id)
         user_type = user[3] if user else 'customer'
         await query.edit_message_text(
@@ -537,7 +521,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     full_name = update.effective_user.full_name
     
-    # Foydalanuvchini tekshirish
     user = db.get_user(user_id)
     if not user:
         await update.message.reply_text(
@@ -550,7 +533,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 one_time_keyboard=True
             )
         )
-        return States.WAITING_PHONE.value
+        return WAITING_PHONE
     
     user_type = user[3]
     await update.message.reply_text(
@@ -558,7 +541,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Sizning ro'lingiz: {'🚗 Haydovchi' if user_type == 'driver' else '👤 Mijoz'}",
         reply_markup=get_main_keyboard(user_type)
     )
-    return States.MAIN.value
+    return ConversationHandler.END
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     contact = update.message.contact
@@ -577,27 +560,25 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Agar haydovchi sifatida ro'yxatdan o'tmoqchi bo'lsangiz, /driver buyrug'ini yuboring.",
         reply_markup=get_main_keyboard('customer')
     )
-    return States.MAIN.value
+    return ConversationHandler.END
 
 async def register_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    # Foydalanuvchi mavjudligini tekshirish
     user = db.get_user(user_id)
     if not user:
         await update.message.reply_text(
             "❌ Avval /start buyrug'i bilan ro'yxatdan o'ting!"
         )
-        return States.MAIN.value
+        return ConversationHandler.END
     
-    # Haydovchi allaqachon ro'yxatdan o'tganmi?
     driver = db.get_driver(user_id)
     if driver:
         await update.message.reply_text(
             "✅ Siz allaqachon haydovchi sifatida ro'yxatdan o'tgansiz!",
             reply_markup=get_main_keyboard('driver')
         )
-        return States.MAIN.value
+        return ConversationHandler.END
     
     await update.message.reply_text(
         "🚗 Haydovchi sifatida ro'yxatdan o'tish\n\n"
@@ -605,7 +586,7 @@ async def register_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Masalan: Chevrolet Lacetti, 2018",
         reply_markup=get_back_button()
     )
-    return States.WAITING_CAR_MODEL.value
+    return WAITING_CAR_MODEL
 
 async def get_car_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "🔙 Orqaga":
@@ -613,7 +594,7 @@ async def get_car_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Bosh menyuga qaytdingiz.",
             reply_markup=get_main_keyboard('customer')
         )
-        return States.MAIN.value
+        return ConversationHandler.END
     
     context.user_data['car_model'] = update.message.text
     
@@ -622,7 +603,7 @@ async def get_car_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Masalan: 01 A 123 AA",
         reply_markup=get_back_button()
     )
-    return States.WAITING_PLATE_NUMBER.value
+    return WAITING_PLATE_NUMBER
 
 async def get_plate_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "🔙 Orqaga":
@@ -630,13 +611,12 @@ async def get_plate_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Bosh menyuga qaytdingiz.",
             reply_markup=get_main_keyboard('customer')
         )
-        return States.MAIN.value
+        return ConversationHandler.END
     
     user_id = update.effective_user.id
     car_model = context.user_data.get('car_model')
     plate_number = update.message.text
     
-    # Foydalanuvchini yangilash
     db.add_user(user_id, update.effective_user.full_name, '', 'driver')
     db.add_driver(user_id, car_model, plate_number)
     
@@ -646,7 +626,7 @@ async def get_plate_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Mavjud buyurtmalarni ko'rish uchun /orders buyrug'ini yuboring.",
         reply_markup=get_main_keyboard('driver')
     )
-    return States.MAIN.value
+    return ConversationHandler.END
 
 async def create_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -654,11 +634,11 @@ async def create_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if not user:
         await update.message.reply_text("❌ Iltimos, avval /start buyrug'ini bosing!")
-        return States.MAIN.value
+        return ConversationHandler.END
     
     if user[3] == 'driver':
         await update.message.reply_text("❌ Haydovchilar buyurtma bera olmaydi!")
-        return States.MAIN.value
+        return ConversationHandler.END
     
     await update.message.reply_text(
         "📍 **Yangi buyurtma**\n\n"
@@ -667,7 +647,7 @@ async def create_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.MARKDOWN,
         reply_markup=get_back_button()
     )
-    return States.WAITING_PICKUP.value
+    return WAITING_PICKUP
 
 async def get_pickup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "🔙 Orqaga":
@@ -675,7 +655,7 @@ async def get_pickup(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Bosh menyuga qaytdingiz.",
             reply_markup=get_main_keyboard('customer')
         )
-        return States.MAIN.value
+        return ConversationHandler.END
     
     context.user_data['pickup'] = update.message.text
     
@@ -684,7 +664,7 @@ async def get_pickup(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Masalan: Toshkent, Yunusobod, 14-mavze",
         reply_markup=get_back_button()
     )
-    return States.WAITING_DELIVERY.value
+    return WAITING_DELIVERY
 
 async def get_delivery(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "🔙 Orqaga":
@@ -692,7 +672,7 @@ async def get_delivery(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Bosh menyuga qaytdingiz.",
             reply_markup=get_main_keyboard('customer')
         )
-        return States.MAIN.value
+        return ConversationHandler.END
     
     context.user_data['delivery'] = update.message.text
     
@@ -701,7 +681,7 @@ async def get_delivery(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Masalan: +998901234567",
         reply_markup=get_back_button()
     )
-    return States.WAITING_ORDER_PHONE.value
+    return WAITING_ORDER_PHONE
 
 async def get_order_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "🔙 Orqaga":
@@ -709,19 +689,17 @@ async def get_order_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Bosh menyuga qaytdingiz.",
             reply_markup=get_main_keyboard('customer')
         )
-        return States.MAIN.value
+        return ConversationHandler.END
     
     user_id = update.effective_user.id
     pickup = context.user_data.get('pickup')
     delivery = context.user_data.get('delivery')
     phone = update.message.text
     
-    # Buyurtma narxini hisoblash (oddiy hisob - masofa bo'yicha)
     amount = 15000
     
     order_id = db.add_order(user_id, pickup, delivery, phone, amount)
     
-    # Haydovchilarga xabar yuborish
     cursor = db.conn.cursor()
     cursor.execute("SELECT user_id FROM drivers WHERE is_available = 1")
     drivers = cursor.fetchall()
@@ -758,7 +736,7 @@ async def get_order_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Haydovchi qabul qilishini kuting...",
         reply_markup=get_main_keyboard('customer')
     )
-    return States.MAIN.value
+    return ConversationHandler.END
 
 async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -766,7 +744,6 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     driver_id = query.from_user.id
     
-    # Haydovchi ro'yxatdan o'tganmi?
     driver = db.get_driver(driver_id)
     if not driver:
         await query.edit_message_text("❌ Siz haydovchi sifatida ro'yxatdan o'tmagansiz!")
@@ -774,19 +751,17 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     order_id = int(query.data.split('_')[1])
     
-    # Order ni tekshirish
     order = db.get_order(order_id)
     if not order:
         await query.edit_message_text("❌ Buyurtma topilmadi!")
         return
     
-    if order[6] != 'pending':  # status index
+    if order[6] != 'pending':
         await query.edit_message_text("❌ Bu buyurtma allaqachon boshqa haydovchi tomonidan qabul qilingan!")
         return
     
     db.update_order_status(order_id, 'accepted', driver_id)
     
-    # Buyurtma ma'lumotlarini olish
     cursor = db.conn.cursor()
     cursor.execute("SELECT customer_id, pickup_address, delivery_address, customer_phone FROM orders WHERE order_id = ?", (order_id,))
     order_data = cursor.fetchone()
@@ -799,7 +774,6 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Buyurtmani bajarganingizdan so'ng /complete_{order_id} buyrug'ini yuboring."
     )
     
-    # Mijozga xabar
     try:
         await context.bot.send_message(
             order_data[0],
@@ -813,10 +787,8 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Xabar yuborilmadi: {e}")
 
 async def complete_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Buyurtmani bajarilgan deb belgilash"""
     user_id = update.effective_user.id
     
-    # Command ni tekshirish
     if not update.message.text.startswith('/complete_'):
         await update.message.reply_text("❌ Noto'g'ri format! /complete_{order_id} ko'rinishida yuboring.")
         return
@@ -827,26 +799,22 @@ async def complete_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Noto'g'ri format! /complete_{order_id} ko'rinishida yuboring.")
         return
     
-    # Tekshirish
     order = db.get_order(order_id)
     if not order:
         await update.message.reply_text("❌ Buyurtma topilmadi!")
         return
     
-    # order: (order_id, customer_id, driver_id, pickup_address, delivery_address, 
-    #         customer_phone, status, amount, commission, created_at, completed_at)
-    if order[2] != user_id:  # driver_id index
+    if order[2] != user_id:
         await update.message.reply_text("❌ Bu sizning buyurtmangiz emas!")
         return
     
-    if order[6] != 'accepted':  # status index
+    if order[6] != 'accepted':
         await update.message.reply_text("❌ Buyurtma qabul qilingan holatda emas!")
         return
     
     db.update_order_status(order_id, 'completed')
     
-    # Haydovchiga to'lov miqdorini hisoblash
-    driver_payment = order[7] - order[8]  # amount - commission
+    driver_payment = order[7] - order[8]
     
     await update.message.reply_text(
         f"✅ #{order_id} - buyurtma muvaffaqiyatli bajarildi!\n"
@@ -854,10 +822,9 @@ async def complete_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Buyurtmachiga reyting qoldirishni unutmang."
     )
     
-    # Mijozga xabar
     try:
         await context.bot.send_message(
-            order[1],  # customer_id
+            order[1],
             f"✅ #{order_id} - buyurtmangiz yetkazib berildi!\n"
             f"Xizmatdan foydalanganingiz uchun rahmat!\n\n"
             f"Haydovchiga reyting bering: /rate_{order_id}",
@@ -867,10 +834,8 @@ async def complete_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Xabar yuborilmadi: {e}")
 
 async def rate_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Haydovchiga reyting berish"""
     user_id = update.effective_user.id
     
-    # Command ni tekshirish
     if not update.message.text.startswith('/rate_'):
         await update.message.reply_text("❌ Noto'g'ri format! /rate_{order_id} ko'rinishida yuboring.")
         return
@@ -881,17 +846,16 @@ async def rate_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Noto'g'ri format! /rate_{order_id} ko'rinishida yuboring.")
         return
     
-    # Tekshirish
     order = db.get_order(order_id)
     if not order:
         await update.message.reply_text("❌ Buyurtma topilmadi!")
         return
     
-    if order[1] != user_id:  # customer_id index
+    if order[1] != user_id:
         await update.message.reply_text("❌ Bu sizning buyurtmangiz emas!")
         return
     
-    if order[6] != 'completed':  # status index
+    if order[6] != 'completed':
         await update.message.reply_text("❌ Faqat bajarilgan buyurtmalarga reyting berish mumkin!")
         return
     
@@ -910,10 +874,9 @@ async def rate_driver(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⭐ Haydovchiga reyting bering (1-5):",
         reply_markup=reply_markup
     )
-    return States.WAITING_RATING.value
+    return WAITING_RATING
 
 async def save_rating(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Reytingni saqlash"""
     query = update.callback_query
     await query.answer()
     
@@ -925,8 +888,7 @@ async def save_rating(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     order = db.get_order(order_id)
-    if order and order[2]:  # driver_id mavjud
-        # Haydovchi reytingini yangilash
+    if order and order[2]:
         db.update_driver_rating(order[2], rating)
         
         await query.edit_message_text(
@@ -935,7 +897,6 @@ async def save_rating(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Xizmatdan foydalanganingiz uchun rahmat!"
         )
         
-        # context.user_data dan tozalash
         context.user_data.pop('rate_order_id', None)
         return ConversationHandler.END
     else:
@@ -986,7 +947,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🚗 Mavjudlik holati" and user_type == 'driver':
         driver = db.get_driver(user_id)
         if driver:
-            is_available = driver[3]  # is_available index
+            is_available = driver[3]
             status = "🟢 Faol" if is_available else "🔴 Faol emas"
             
             keyboard = InlineKeyboardMarkup([
@@ -1006,8 +967,8 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "⭐ Reytingim" and user_type == 'driver':
         driver = db.get_driver(user_id)
         if driver:
-            rating = driver[4]  # rating index
-            total_orders = driver[5]  # total_orders index
+            rating = driver[4]
+            total_orders = driver[5]
             await update.message.reply_text(
                 f"⭐ **Sizning reytingingiz:**\n\n"
                 f"{rating:.1f} ⭐\n"
@@ -1056,8 +1017,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /rate_{id} - Reyting berish
 /admin - Admin panel (faqat adminlar uchun)
 
-📞 **Aloqa:** @reall_javohir | +998701154403
-
+📞 **Aloqa:** @reall_javohit | +998701154403
         """
         await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
 
@@ -1069,7 +1029,7 @@ async def toggle_availability(update: Update, context: ContextTypes.DEFAULT_TYPE
     driver = db.get_driver(driver_id)
     
     if driver:
-        new_status = not driver[3]  # is_available index
+        new_status = not driver[3]
         db.update_driver_availability(driver_id, new_status)
         
         status_text = "🟢 Faol" if new_status else "🔴 Faol emas"
@@ -1109,7 +1069,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== MAIN ====================
 def main():
-    # Logging sozlamalari
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
@@ -1117,22 +1076,22 @@ def main():
     
     app = Application.builder().token(TOKEN).build()
     
-    # Conversation handler - ro'yxatdan o'tish
+    # Conversation handler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            States.WAITING_PHONE.value: [MessageHandler(filters.CONTACT, handle_contact)],
-            States.WAITING_CAR_MODEL.value: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_car_model)],
-            States.WAITING_PLATE_NUMBER.value: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_plate_number)],
-            States.WAITING_PICKUP.value: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_pickup)],
-            States.WAITING_DELIVERY.value: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_delivery)],
-            States.WAITING_ORDER_PHONE.value: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_order_phone)],
-            States.WAITING_RATING.value: [CallbackQueryHandler(save_rating, pattern='^rate_')],
+            WAITING_PHONE: [MessageHandler(filters.CONTACT, handle_contact)],
+            WAITING_CAR_MODEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_car_model)],
+            WAITING_PLATE_NUMBER: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_plate_number)],
+            WAITING_PICKUP: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_pickup)],
+            WAITING_DELIVERY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_delivery)],
+            WAITING_ORDER_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_order_phone)],
+            WAITING_RATING: [CallbackQueryHandler(save_rating, pattern='^rate_')],
         },
         fallbacks=[CommandHandler('cancel', cancel), MessageHandler(filters.Regex('^🔙 Orqaga$'), cancel)],
+        allow_reentry=True
     )
     
-    # Handlers
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler('driver', register_driver))
     app.add_handler(CommandHandler('admin', admin_panel))
@@ -1144,7 +1103,6 @@ def main():
     app.add_handler(MessageHandler(filters.Regex('^/complete_'), complete_order))
     app.add_handler(MessageHandler(filters.Regex('^/rate_'), rate_driver))
     
-    # Botni ishga tushirish
     print("Bot ishga tushdi...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
