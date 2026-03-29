@@ -190,7 +190,7 @@ class DeliveryBot:
             "🚖 Buyurtma berish - 'Buyurtma berish' tugmasini bosing\n"
             "📋 Mening buyurtmalarim - buyurtmalaringizni ko'rish\n"
             "💰 Narxlar - 1 kg uchun 5000 so'm\n\n"
-            "📞 Savol va takliflar uchun: @admin_username"
+            "📞 Savol va takliflar uchun: @reall_javohir"
         )
     
     async def admin_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -198,7 +198,10 @@ class DeliveryBot:
         user_id = update.effective_user.id
         
         if user_id not in ADMIN_IDS:
-            await update.message.reply_text("❌ Sizda admin huquqlari yo'q!")
+            if update.message:
+                await update.message.reply_text("❌ Sizda admin huquqlari yo'q!")
+            else:
+                await update.callback_query.message.reply_text("❌ Sizda admin huquqlari yo'q!")
             return
         
         keyboard = [
@@ -247,32 +250,135 @@ class DeliveryBot:
         
         db.close()
     
+    async def complete_order(self, update: Update, context: ContextTypes.DEFAULT_TYPE, data):
+        """Buyurtmani yakunlash"""
+        order_id = int(data.split('_')[2])
+        
+        db = SessionLocal()
+        order = db.query(Order).filter(Order.id == order_id).first()
+        
+        if order and order.status == 'accepted':
+            order.status = 'completed'
+            order.completed_at = datetime.now()
+            db.commit()
+            
+            # Mijozga xabar
+            await self.application.bot.send_message(
+                chat_id=order.user_id,
+                text=f"✅ Buyurtma #{order_id} muvaffaqiyatli yakunlandi!\n\nXizmatimizdan foydalanganingiz uchun rahmat!"
+            )
+            
+            await update.callback_query.message.reply_text(f"✅ Buyurtma #{order_id} yakunlandi!")
+        else:
+            await update.callback_query.message.reply_text(f"❌ Buyurtma #{order_id} yakunlanmadi!")
+        
+        db.close()
+    
+    async def cancel_order(self, update: Update, context: ContextTypes.DEFAULT_TYPE, data):
+        """Buyurtmani bekor qilish"""
+        order_id = int(data.split('_')[2])
+        
+        db = SessionLocal()
+        order = db.query(Order).filter(Order.id == order_id).first()
+        
+        if order and order.status == 'pending':
+            order.status = 'cancelled'
+            db.commit()
+            
+            # Mijozga xabar
+            await self.application.bot.send_message(
+                chat_id=order.user_id,
+                text=f"❌ Buyurtma #{order_id} bekor qilindi!"
+            )
+            
+            await update.callback_query.message.reply_text(f"❌ Buyurtma #{order_id} bekor qilindi!")
+        else:
+            await update.callback_query.message.reply_text(f"❌ Buyurtma #{order_id} bekor qilinmadi!")
+        
+        db.close()
+    
+    async def show_order_details(self, update: Update, context: ContextTypes.DEFAULT_TYPE, data):
+        """Buyurtma detallarini ko'rsatish"""
+        order_id = int(data.split('_')[1])
+        
+        db = SessionLocal()
+        order = db.query(Order).filter(Order.id == order_id).first()
+        db.close()
+        
+        if order:
+            status_text = {
+                'pending': '⏳ Kutilmoqda',
+                'accepted': '✅ Qabul qilingan',
+                'in_progress': '🚚 Yetkazilmoqda',
+                'completed': '✅ Yakunlangan',
+                'cancelled': '❌ Bekor qilingan'
+            }.get(order.status, order.status)
+            
+            # Username ni xavfsiz olish
+            user_name = "Noma'lum"
+            if order.user:
+                if order.user.username:
+                    user_name = order.user.username
+                elif order.user.full_name:
+                    user_name = order.user.full_name
+            
+            text = (
+                f"📋 Buyurtma #{order.id}\n\n"
+                f"👤 Mijoz: {user_name}\n"
+                f"📍 Jo'natish: {order.address_from}\n"
+                f"📍 Qabul: {order.address_to}\n"
+                f"⚖️ Og'irligi: {order.weight} kg\n"
+                f"💰 Narxi: {order.price} so'm\n"
+                f"📊 Holati: {status_text}\n"
+                f"📅 Yaratilgan: {order.created_at.strftime('%d.%m.%Y %H:%M')}\n"
+            )
+            
+            if order.completed_at:
+                text += f"✅ Yakunlangan: {order.completed_at.strftime('%d.%m.%Y %H:%M')}\n"
+            
+            keyboard = []
+            if order.status == 'pending':
+                keyboard.append([InlineKeyboardButton("✅ Qabul qilish", callback_data=f"accept_order_{order.id}")])
+                keyboard.append([InlineKeyboardButton("❌ Bekor qilish", callback_data=f"cancel_order_{order.id}")])
+            elif order.status == 'accepted':
+                keyboard.append([InlineKeyboardButton("✅ Yakunlash", callback_data=f"complete_order_{order.id}")])
+            
+            if keyboard:
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.callback_query.message.reply_text(text, reply_markup=reply_markup)
+            else:
+                await update.callback_query.message.reply_text(text)
+        else:
+            await update.callback_query.message.reply_text("❌ Buyurtma topilmadi!")
+    
     async def notify_admins(self, order):
         """Adminlarga yangi buyurtma haqida xabar berish"""
+        # Username ni xavfsiz olish
+        user_name = "Noma'lum"
+        if order.user:
+            if order.user.username:
+                user_name = order.user.username
+            elif order.user.full_name:
+                user_name = order.user.full_name
+        
         for admin_id in ADMIN_IDS:
             keyboard = [[InlineKeyboardButton("✅ Qabul qilish", callback_data=f"accept_order_{order.id}")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await self.application.bot.send_message(
                 chat_id=admin_id,
-                text=f"🆕 Yangi buyurtma!\n\n"
-                     f"📋 ID: {order.id}\n"
-                     f"📍 Jo'natish: {order.address_from}\n"
-                     f"📍 Qabul: {order.address_to}\n"
-                     f"⚖️ Og'irligi: {order.weight} kg\n"
-                     f"💰 Narxi: {order.price} so'm\n"
-                     f'👤 Mijoz: @{order.user.username if order.user else "Noma\'lum"}',
+                text=(
+                    f"🆕 Yangi buyurtma!\n\n"
+                    f"📋 ID: {order.id}\n"
+                    f"📍 Jo'natish: {order.address_from}\n"
+                    f"📍 Qabul: {order.address_to}\n"
+                    f"⚖️ Og'irligi: {order.weight} kg\n"
+                    f"💰 Narxi: {order.price} so'm\n"
+                    f"👤 Mijoz: {user_name}"
+                ),
                 reply_markup=reply_markup
             )
     
     def run(self):
         """Botni ishga tushirish"""
         self.application.run_polling()
-
-if __name__ == '__main__':
-    # Bazani yaratish
-    init_db()
-    
-    # Botni ishga tushirish
-    bot = DeliveryBot()
-    bot.run()
