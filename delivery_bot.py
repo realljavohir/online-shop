@@ -261,7 +261,7 @@ class DeliveryBot:
                      f"📍 Qabul: {order.address_to}\n"
                      f"⚖️ Og'irligi: {order.weight} kg\n"
                      f"💰 Narxi: {order.price} so'm\n"
-                     f"👤 Mijoz: @{order.user.username if order.user else 'Noma\'lum'}",
+                     f'👤 Mijoz: @{order.user.username if order.user else "Noma\'lum"}',
                 reply_markup=reply_markup
             )
     
